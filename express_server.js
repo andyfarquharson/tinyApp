@@ -19,7 +19,7 @@ app.get("/urls", (req, res) => {
 })
 
 app.get("/urls/:id", (req, res) => {
-  const templateVars = { id: req.params.id, longURL: "http://localhost:8080/urls/:id" };
+  const templateVars = { id: req.params.id, longURL: "http://www.lighthouselabs.ca" };
   res.render("urls_show", templateVars);
 });
 
