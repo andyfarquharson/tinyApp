@@ -40,12 +40,17 @@ app.get("/urls/:id", (req, res) => {
     res.redirect(urlDatabase[req.params.id].longURL);
     res.redirect(longURL);
   });
-  
+// Deletes url from database  
 app.post("/urls/:id/delete", (req, res) => {
   const id = req.params.id; 
   delete urlDatabase[id];
   res.redirect("/urls");
-
+})
+// Updates url in the database
+app.post("/urls/:id/", (req, res) => {
+  const id = req.params.id;
+  urlDatabase[id] = req.body.updatedURL;
+  res.redirect("/urls");
 })
 
   app.post("/urls", (req, res) => {
