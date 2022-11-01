@@ -19,34 +19,48 @@ app.get("/", (req, res) => {
   res.redirect("/urls");
 });
 
-app.post("/urls", (req, res) => {
-  const shortURL = generateRandomString();
-  urlDatabase[shortURL] = req.body.longURL
-  res.redirect(`/urls/${shortURL}`);
-});
-
+app.get("/urls", (req, res) => {
+  const templateVars = { urls: urlDatabase };
+  res.render("urls_index", templateVars);
+})
 // Form to get a new url
 app.get("/urls/new", (req, res) => {
   res.render("urls_new");
 });
 
-app.get("/urls", (req, res) => {
-  const templateVars = { urls: urlDatabase };
-  res.render("urls_index", templateVars);
-})
-
-app.get("/urls.json", (req, res) => {
-  res.json(urlDatabase);
-});
-
 app.get("/urls/:id", (req, res) => {
   const templateVars = { 
     id: req.params.id, 
-    longURL: req.body.longURL };
-  res.render("urls_show", templateVars);
-});
+    longURL: urlDatabase[req.params.id].longURL };
+    res.render("urls_show", templateVars);
+  });
+  
+  app.get("/u/:id", (req, res) => {
+    const longURL = urlDatabase[req.params.id].longURL;
+    res.redirect(urlDatabase[req.params.id].longURL);
+    res.redirect(longURL);
+  });
+  
+app.post("/urls/:id/delete", (req, res) => {
+  const id = req.params.id; 
+  delete urlDatabase[id];
+  res.redirect("/urls");
 
+})
 
+  app.post("/urls", (req, res) => {
+    const id = generateRandomString();
+    urlDatabase[id] = req.body.longURL;
+    res.redirect(`/urls/${id}`);
+  });
+
+  app.get("/urls.json", (req, res) => {
+    res.json(urlDatabase);
+  });
+
+  
+  
+  
 app.listen(PORT, () => {
   console.log(`Example app listening on port ${PORT}!`);
 });
