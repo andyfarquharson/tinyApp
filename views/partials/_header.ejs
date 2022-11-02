@@ -23,11 +23,14 @@
       <form method="POST" action="/login" class="form-inline">
         <input class = "form-control" type = "text" name = "updatedURL" placeholder = "Username" style = "width: 300px; margin: 1em">
         <button type="submit" class="btn btn-outline-dark" style="margin: 1em">Login</button>
-        <% } else %>
+        <% } else { %>
+        <form class="form-inline my-1" action="/logout" method="POST">
         <div>
           <label>Logged In As: <%= user %></label>
-          <a class="btn btn-primary" href="/logout">Logout</a>
-      </form>
+          <button type="submit" class="btn btn-outline-primary ml-3">Logout</button>
+          </div>
+        </form>
+        <% } %>
     </div>
   </nav>
 </header>
