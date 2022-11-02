@@ -1,4 +1,5 @@
 const express = require("express");
+const cookieParser = require('cookie-parser');
 const app = express();
 const PORT = 8080; // default port 8080
 
@@ -40,7 +41,14 @@ app.get("/urls/:id", (req, res) => {
     res.redirect(urlDatabase[req.params.id].longURL);
     res.redirect(longURL);
   });
-// Deletes url from database  
+// Login with username
+app.post("/login", (req, res) => {
+  const user = req.body.user;
+  res.cookie('username', user);
+  res.redirect('/urls');
+});
+
+  // Deletes url from database  
 app.post("/urls/:id/delete", (req, res) => {
   const id = req.params.id; 
   delete urlDatabase[id];
@@ -53,11 +61,11 @@ app.post("/urls/:id/", (req, res) => {
   res.redirect("/urls");
 })
 
-  app.post("/urls", (req, res) => {
-    const id = generateRandomString();
-    urlDatabase[id] = req.body.longURL;
-    res.redirect(`/urls/${id}`);
-  });
+app.post("/urls", (req, res) => {
+  const id = generateRandomString();
+  urlDatabase[id] = req.body.longURL;
+  res.redirect(`/urls/${id}`);
+});
 
   app.get("/urls.json", (req, res) => {
     res.json(urlDatabase);
