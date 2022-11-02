@@ -19,9 +19,14 @@
       </div>
     </div>
     <div>
+    <% if (!user) {%>
       <form method="POST" action="/login" class="form-inline">
         <input class = "form-control" type = "text" name = "updatedURL" placeholder = "Username" style = "width: 300px; margin: 1em">
         <button type="submit" class="btn btn-outline-dark" style="margin: 1em">Login</button>
+        <% } else %>
+        <div>
+          <label>Logged In As: <%= user %></label>
+          <a class="btn btn-primary" href="/logout">Logout</a>
       </form>
     </div>
   </nav>

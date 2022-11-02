@@ -21,18 +21,26 @@ app.get("/", (req, res) => {
 });
 
 app.get("/urls", (req, res) => {
-  const templateVars = { urls: urlDatabase };
+  const templateVars = { 
+    urls: urlDatabase,
+    user: 'Andy'
+   };
   res.render("urls_index", templateVars);
 })
 // Form to get a new url
 app.get("/urls/new", (req, res) => {
-  res.render("urls_new");
+  const templateVars = {
+    user: 'Andy'
+  }
+  res.render("urls_new", templateVars);
 });
 
 app.get("/urls/:id", (req, res) => {
   const templateVars = { 
     id: req.params.id, 
-    longURL: urlDatabase[req.params.id].longURL };
+    longURL: urlDatabase[req.params.id].longURL,
+    user: 'Andy'
+  };
     res.render("urls_show", templateVars);
   });
   
@@ -45,6 +53,12 @@ app.get("/urls/:id", (req, res) => {
 app.post("/login", (req, res) => {
   const user = req.body.user;
   res.cookie('username', user);
+  res.redirect('/urls');
+});
+
+// Logout post
+app.post('/logout', (req, res) => {
+  res.clearCookie('user')
   res.redirect('/urls');
 });
 
