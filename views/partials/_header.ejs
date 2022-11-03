@@ -19,15 +19,13 @@
       </div>
     </div>
     <div>
-    <% if (!user) {%>
-      <form method="POST" action="/login" class="form-inline">
-        <input class = "form-control" type = "text" name = "updatedURL" placeholder = "Username" style = "width: 300px; margin: 1em">
-        <button type="submit" class="btn btn-outline-dark" style="margin: 1em">Login</button>
+    <% if (!user) {%>  
+      <a class="btn" href="/login"><button type="submit" class="btn btn-outline-dark" style="margin: 1em">Login</button></a>
+      <a class="btn" href="/registration"><button type="submit" class="btn btn-outline-dark" style="margin: 1em">Register</button></a>
         <% } else { %>
         <form class="form-inline my-1" action="/logout" method="POST">
         <div>
-          <label>Logged In As: <%= user %></label>
-          <button type="submit" class="btn btn-outline-primary ml-3">Logout</button>
+          <label>Logged In As: <%= user %><button type="submit" class="btn btn-outline-primary ml-3">Logout</button></label>
           </div>
         </form>
         <% } %>
