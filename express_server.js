@@ -1,32 +1,46 @@
 const express = require("express");
 const app = express();
-const cookieParser = require('cookie-parser');
+const cookieSession = require('cookie-session');
 const morgan = require('morgan');
-app.use(cookieParser());
 const PORT = 8080; // default port 8080
 
 // Middleware
 app.set("view engine", "ejs");
 app.use(express.urlencoded({ extended: true }));
+app.use(cookieSession({name: "session", keys: ["soybean"]}));
 app.use(morgan('dev'));
 // Function used to get short URL and username
 function generateRandomString() {
   const result = Math.random().toString(36).substring(2,8);
   return result;
 }
+//
+const getUserByEmail = (email, users) => {
+  for (const key in users) {
+    const user = users[key];
+    if (email === user.email) {
+      return user;
+    }
+  }
+  return null;
+};
 // 
+const getUserbyID = (name, users) => {
+  const user = users[name];
+  if (user) {
+    return user;
+  }
+  return null;
+}
 // const urlDatabase = {
-//   "b2xVn2": "http://www.lighthouselabs.ca",
-//   "9sm5xK": "http://www.google.com"
-// };
 const urlDatabase = {
   b6UTxQ: {
     longURL: "https://www.tsn.ca",
-    userID: "aJ48lW",
+    name: "aJ48lW",
   },
   i3BoGr: {
     longURL: "https://www.google.ca",
-    userID: "aJ48lW",
+    name: "aJ48lW",
   },
 };
 
@@ -50,7 +64,8 @@ const users = {
 };
 // Homepage
 app.get("/", (req, res) => {
-  if (req.cookies["username"]) {
+  
+  if (req.session.user_id) {
     res.redirect("/urls");
   } else {
     res.redirect("/login");
@@ -58,11 +73,12 @@ app.get("/", (req, res) => {
 });
 
 app.get("/urls", (req, res) => {
+  const name = req.session.user_id;
+  if (name) {
   const templateVars = {
     urls: urlDatabase,
-    user: req.cookies["username"]
+    user: users[name]
   };
-  if (req.cookies["username"]) {
     res.render("urls_index", templateVars);
   } else {
     res.redirect("/login");
@@ -70,110 +86,103 @@ app.get("/urls", (req, res) => {
 });
 // Form to get a new url
 app.get("/urls/new", (req, res) => {
+  const name = req.session.user_id;
+  console.log(req.session.user_id)
+  const user = getUserbyID(name, users);
   const templateVars = {
     urls: urlDatabase,
-    longURL: req.body.id,
-    user: req.cookies["username"]
+    longURL: req.body.longURL,
+    user: users[name]
   };
-  if (!templateVars.user) {
+  if (!user) {
     res.redirect("/login");
   } else {
     res.render("urls_new", templateVars);
   }
 });
 
-app.get("/urls/:id", (req, res) => {
+app.get("/urls/:shortURL", (req, res) => {
+  const shortURL = req.params.shortURL
   const templateVars = {
-    urls: urlDatabase,
-    id: req.params.id,
-    longURL: req.params.id,
-    user: req.cookies["username"]
-  };
-  res.render("urls_show", templateVars);
-});
+      urls: urlDatabase,
+      shortURL: req.params.shortURL,
+      longURL: urlDatabase[shortURL].longURL,
+      user: req.session.user_id
+    };
+    res.render("urls_show", templateVars);
+  });
   
-app.get("/u/:id", (req, res) => {
+app.get("/u/:shortURL", (req, res) => {
   const templateVars = {
-    id: req.params.id,
-    longURL: req.params.id,
-    user: req.cookies["username"]
+    shortURL: req.params.shortURL,
+    longURL: req.params.longURL,
+    user: req.session.user_id
   };
   res.redirect("longUrl", templateVars);
 });
 // Login with username
 app.get("/login", (req, res) => {
-  const templateVars = {
-    urls: urlDatabase,
-    id: req.params.id,
-    longURL: req.params.id,
-    user: req.cookies["username"]
-  };  
-  if (req.cookies["username"]) {
+  if (req.session.user_id) {
     res.redirect("/urls")
   } else {
+  const templateVars = {
+    user: users[req.session.user_id]
+  };  
   res.render("urls_login", templateVars);
   }
-})
+});
 
 app.post("/login", (req, res) => {
-  for (let key in users) {
-    if (users[key].email === req.body.email) {
-      if (users[key].password === req.body.password) {
-        res.cookie('username', users[key].name)        
-        res.redirect("/urls");
-      } else {
-        res.clearCookie('user');
-        res.redirect("/login");
-      }
-    }
-  }res.clearCookie('user');
-  res.redirect("/login");
-
-
+  const email = req.body.email;
+  const password = req.body.password;
+  const name = getUserByEmail(email, users);
+  if (!email || !password) {
+    res.status(400).send('400 Error: Must contain correct email or password');
+  } else {
+    req.session.user_id = name.name;        
+    res.redirect("/urls");
+  }
 });
 
 
 // Deletes url from database
-app.post("/urls/:id/delete", (req, res) => {
-  const id = req.params.id;
-  delete urlDatabase[id];
+app.post("/urls/:shortURL/delete", (req, res) => {
+  const shortURL = req.params.shortURL;
+  delete urlDatabase[shortURL];
   res.redirect("/urls");
 });
 // Updates url in the database
-app.post("/urls/:id/", (req, res) => {
-  const id = req.params.id;
-  urlDatabase[id] = req.body.updatedURL;
+app.post("/urls/:shortURL/", (req, res) => {
+  const shortURL = req.params.shortURL;
+  urlDatabase[shortURL] = req.body.updatedURL;
   res.redirect("/urls");
 });
 
 app.post("/urls", (req, res) => {
-  const id = generateRandomString();
-  urlDatabase[id] = req.body.longURL;
-  if (req.cookie["username"]) {
-  res.redirect(`/urls/${id}`);
+  const shortURL = generateRandomString();
+  urlDatabase[shortURL] = req.body.longURL;
+  if (req.session.user_id) {
+  res.redirect(`/urls/${shortURL}`);
   } else {
   res.status(400).send('400 Error: Must be logged in to save urls');
   }
 });
 // Logout post
 app.post("/logout", (req, res) => {
-  res.clearCookie('username');
+  req.session = null;
   res.redirect("/login");
 });
 // registration
 app.get("/registration", (req, res) => {
-  const templateVars = {
-    urls: urlDatabase,
-    id: req.params.id,
-    longURL: req.params.id,
-    user: req.cookies["username"]
-  };
-  if (req.cookies["username"]) {
+  if (req.session.user_id) {
     res.redirect("/urls");
   } else {
+  const templateVars = {
+    user: req.session.user_id
+  };
   res.render("urls_registration", templateVars);
   }
-})
+});
 
 app.post("/registration", (req, res) => {
   const name = generateRandomString();
@@ -182,8 +191,8 @@ app.post("/registration", (req, res) => {
   if (!email || !password) {
     res.status(400).send('400 Error: Must contain correct email or password');
   } else {
-    res.cookie('name', users.name)
-    users[name] ={
+    res.session.user_id
+    users[name] = {
       name,
       email,
       password
