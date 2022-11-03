@@ -25,39 +25,51 @@ const getUserByEmail = (email, users) => {
   return null;
 };
 // 
-const getUserbyID = (name, users) => {
-  const user = users[name];
+const getUserbyID = (id, users) => {
+  const user = users[id];
   if (user) {
     return user;
   }
   return null;
 }
+
+const getURLsByUserID = (userID) => {
+  let userURLDatabase = {};
+  for (const url in urlDatabase) {
+    if (urlDatabase[url].user_id === userID) {
+      userURLDatabase[url] = urlDatabase[url] 
+    }
+  }
+  console.log
+  return userURLDatabase;
+}
+
 // const urlDatabase = {
 const urlDatabase = {
   b6UTxQ: {
     longURL: "https://www.tsn.ca",
-    name: "aJ48lW",
+    user_id: "aJ48lW",
   },
   i3BoGr: {
     longURL: "https://www.google.ca",
-    name: "aJ48lW",
+    user_id: "aJ48lW",
   },
 };
 
 // User
 const users = {
-  Random: {
-    name: "userRandomID",
+  userRandomID: {
+    id: "userRandomID",
     email: "user@example.com",
     password: "pmd",
   },
   bcplu4: {
-    name: "bcplu4",
+    id: "bcplu4",
     email: "user2@example.com",
     password: "dishwasher-funk",
   },
   aJ48lW: {
-    name: "aJ48lW",
+    id: "aJ48lW",
     email: "a@b.com",
     password: "123"
   }
@@ -74,9 +86,10 @@ app.get("/", (req, res) => {
 
 app.get("/urls", (req, res) => {
   const name = req.session.user_id;
+  console.log(getURLsByUserID(name))
   if (name) {
   const templateVars = {
-    urls: urlDatabase,
+    urls: getURLsByUserID(name),
     user: users[name]
   };
     res.render("urls_index", templateVars);
@@ -139,7 +152,7 @@ app.post("/login", (req, res) => {
   if (!email || !password) {
     res.status(400).send('400 Error: Must contain correct email or password');
   } else {
-    req.session.user_id = name.name;        
+    req.session.user_id = name.id;        
     res.redirect("/urls");
   }
 });
@@ -154,14 +167,20 @@ app.post("/urls/:shortURL/delete", (req, res) => {
 // Updates url in the database
 app.post("/urls/:shortURL/", (req, res) => {
   const shortURL = req.params.shortURL;
-  urlDatabase[shortURL] = req.body.updatedURL;
+  console.log(req.body)
+  const longURL = req.body.updatedURL
+  const user_id = req.session.user_id
+  urlDatabase[shortURL] = {longURL, user_id};
   res.redirect("/urls");
 });
 
 app.post("/urls", (req, res) => {
   const shortURL = generateRandomString();
-  urlDatabase[shortURL] = req.body.longURL;
+  const longURL = req.body.longURL
+  const user_id = req.session.user_id
+  urlDatabase[shortURL] = {longURL, user_id};
   if (req.session.user_id) {
+  console.log(urlDatabase);
   res.redirect(`/urls/${shortURL}`);
   } else {
   res.status(400).send('400 Error: Must be logged in to save urls');
@@ -178,7 +197,7 @@ app.get("/registration", (req, res) => {
     res.redirect("/urls");
   } else {
   const templateVars = {
-    user: req.session.user_id
+    user: users[req.session.user_id]
   };
   res.render("urls_registration", templateVars);
   }
@@ -191,12 +210,13 @@ app.post("/registration", (req, res) => {
   if (!email || !password) {
     res.status(400).send('400 Error: Must contain correct email or password');
   } else {
-    res.session.user_id
+    req.session.user_id = name;
     users[name] = {
       name,
       email,
       password
     }
+    console.log(users);
   };
   res.redirect("/urls");
 })
