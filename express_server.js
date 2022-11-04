@@ -1,10 +1,10 @@
 const express = require("express");
 const app = express();
 const cookieSession = require('cookie-session');
-const bcrypt = require('bcryptjs')
+const bcrypt = require('bcryptjs');
 const morgan = require('morgan');
 const PORT = 8080; // default port 8080
-const {generateRandomString, getURLsByUserID, getUserbyID, getUserByEmail} = require("./helpers");
+const {generateRandomString, getURLsByUserID, getUserbyID, getUserByEmail, emailInUse} = require("./helpers");
 
 // Middleware
 app.set("view engine", "ejs");
@@ -14,16 +14,7 @@ app.use(morgan('dev'));
 // Function used to get short URL and username
 
 // const urlDatabase = {
-const urlDatabase = {
-  b6UTxQ: {
-    longURL: "https://www.tsn.ca",
-    user_id: "aJ48lW",
-  },
-  i3BoGr: {
-    longURL: "https://www.google.ca",
-    user_id: "aJ48lW",
-  },
-};
+const urlDatabase = {};
 
 // User
 const users = {};
@@ -46,7 +37,6 @@ const users = {};
 // };
 // Homepage
 app.get("/", (req, res) => {
-  
   if (req.session.user_id) {
     res.redirect("/urls");
   } else {
@@ -56,13 +46,12 @@ app.get("/", (req, res) => {
 
 app.get("/urls", (req, res) => {
   const name = req.session.user_id;
-  console.log(getURLsByUserID(name, urlDatabase))
   if (name) {
-  const templateVars = {
-    urls: getURLsByUserID(name, urlDatabase),
-    user: users[name]
-  };
-  res.render("urls_index", templateVars);
+    const templateVars = {
+      urls: getURLsByUserID(name, urlDatabase),
+      user: users[name]
+    };
+    res.render("urls_index", templateVars);
   } else {
     res.redirect("/login");
   }
@@ -84,19 +73,20 @@ app.get("/urls/new", (req, res) => {
 });
 
 app.get("/urls/:shortURL", (req, res) => {
-  const shortURL = req.params.shortURL
-  console.log(urlDatabase[shortURL].longURL)
+  const shortURL = req.params.shortURL;
+  console.log(urlDatabase);
   const templateVars = {
-      urls: urlDatabase,
-      shortURL: req.params.shortURL,
-      longURL: urlDatabase[shortURL].longURL,
-      user: users[req.session.user_id]
+    urls: urlDatabase,
+    shortURL: req.params.shortURL,
+    longURL: urlDatabase[shortURL].longURL,
+    user: users[req.session.user_id]
 
-    };
-    res.render("urls_show", templateVars);
-  });
+  };
+  res.render("urls_show", templateVars);
+});
   
 app.get("/u/:shortURL", (req, res) => {
+  const shortURL = req.params.shortURL;
   const templateVars = {
     urls: urlDatabase,
     shortURL: req.params.shortURL,
@@ -111,10 +101,10 @@ app.get("/registration", (req, res) => {
   if (req.session.user_id) {
     res.redirect("/urls");
   } else {
-  const templateVars = {
-    user: users[req.session.user_id]
-  };
-  res.render("urls_registration", templateVars);
+    const templateVars = {
+      user: users[req.session.user_id]
+    };
+    res.render("urls_registration", templateVars);
   }
 });
 
@@ -122,29 +112,29 @@ app.post("/registration", (req, res) => {
   const name = generateRandomString();
   const email = req.body.email;
   const password = req.body.password;
-  if (!email || !password) {
+  if (!email || !password || emailInUse(email, users)) {
     res.status(400).send('400 Error: Must contain correct email or password');
   } else {
     req.session.user_id = name;
-    const hashPassword = bcrypt.hashSync(password, 10)
+    const hashPassword = bcrypt.hashSync(password, 10);
     users[name] = {
       name,
       email,
       password: hashPassword
-    }
     };
+  }
   res.redirect("/urls");
-})
+});
 
 // Login with username
 app.get("/login", (req, res) => {
   if (req.session.user_id) {
-    res.redirect("/urls")
+    res.redirect("/urls");
   } else {
-  const templateVars = {
-    user: users[req.session.user_id]
-  };  
-  res.render("urls_login", templateVars);
+    const templateVars = {
+      user: users[req.session.user_id]
+    };
+    res.render("urls_login", templateVars);
   }
 });
 
@@ -157,9 +147,9 @@ app.post("/login", (req, res) => {
   }
   if (name === null) {
     return res.status(400).send('400 Error: No user found with that email!');
-    }
+  }
   if (!bcrypt.compareSync(pw, name.password)) {
-    return res.status(400).send('400 Error: Username or password incorrect! Please try again!')
+    return res.status(400).send('400 Error: Username or password incorrect! Please try again!');
   } else {
     req.session.user_id = name.name;
     res.redirect("/urls");
@@ -176,22 +166,22 @@ app.post("/urls/:shortURL/delete", (req, res) => {
 // Updates url in the database
 app.post("/urls/:shortURL/", (req, res) => {
   const shortURL = req.params.shortURL;
-  const longURL = req.body.updatedURL
-  const user_id = req.session.user_id
+  const longURL = req.body.updatedURL;
+  const user_id = req.session.user_id;
   urlDatabase[shortURL] = {longURL, user_id};
-  console.log(urlDatabase[shortURL])
+  console.log(urlDatabase[shortURL]);
   res.redirect("/urls");
 });
 
 app.post("/urls", (req, res) => {
   const shortURL = generateRandomString();
-  const longURL = req.body.longURL
-  const user_id = req.session.user_id
+  const longURL = req.body.longURL;
+  const user_id = req.session.user_id;
   urlDatabase[shortURL] = {longURL, user_id};
   if (req.session.user_id) {
-  res.redirect(`/urls/${shortURL}`);
+    res.redirect(`/urls/${shortURL}`);
   } else {
-  res.status(400).send('400 Error: Must be logged in to save urls');
+    res.status(400).send('400 Error: Must be logged in to save urls');
   }
 });
 // Logout post
@@ -206,7 +196,7 @@ app.get("/urls.json", (req, res) => {
 // 404 error page not found
 app.get("*", (req, res) => {
   res.status(404).send('404 Error: Page not found!');
-})
+});
 
 app.listen(PORT, () => {
   console.log(`Example app listening on port ${PORT}!`);
