@@ -85,12 +85,13 @@ app.get("/urls/new", (req, res) => {
 
 app.get("/urls/:shortURL", (req, res) => {
   const shortURL = req.params.shortURL
-  console.log(urlDatabase)
+  console.log(urlDatabase[shortURL].longURL)
   const templateVars = {
       urls: urlDatabase,
       shortURL: req.params.shortURL,
       longURL: urlDatabase[shortURL].longURL,
-      user: req.session.user_id
+      user: users[req.session.user_id]
+
     };
     res.render("urls_show", templateVars);
   });
@@ -100,7 +101,7 @@ app.get("/u/:shortURL", (req, res) => {
     urls: urlDatabase,
     shortURL: req.params.shortURL,
     longURL: urlDatabase[shortURL].longURL,
-    user: req.session.user_id
+    user: users[req.session.user_id]
   };
   res.redirect("longUrl", templateVars);
 });
@@ -161,7 +162,6 @@ app.post("/login", (req, res) => {
     return res.status(400).send('400 Error: Username or password incorrect! Please try again!')
   } else {
     req.session.user_id = name.name;
-    console.log(name.name)        
     res.redirect("/urls");
   }
 });

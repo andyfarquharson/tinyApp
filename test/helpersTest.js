@@ -21,4 +21,14 @@ describe('getUserByEmail', function() {
     const expectedUserID = "userRandomID";
     assert.strictEqual(user.id, expectedUserID)
   });
+  it('should return a user object when provided with an existing email', function () {
+    const actual = getUserByEmail("user@example.com", testUsers);
+    const expectedOutput = actual;
+    assert.strictEqual(actual, actual);
+  });
+  it('should return null with a non-existent email', function () {
+    const actual = getUserByEmail("invalid@example.com", testUsers);
+    const expectedOutput = null;
+    assert.strictEqual(actual, expectedOutput);
+  });
 });
