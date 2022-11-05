@@ -1,40 +1,22 @@
 const express = require("express");
-const app = express();
 const cookieSession = require('cookie-session');
 const bcrypt = require('bcryptjs');
 const morgan = require('morgan');
-const PORT = 8080; // default port 8080
 const {generateRandomString, getURLsByUserID, getUserbyID, getUserByEmail, emailInUse} = require("./helpers");
 
+const app = express();
+const PORT = 8080; // default port 8080
 // Middleware
 app.set("view engine", "ejs");
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieSession({name: "session", keys: ["soybean"]}));
 app.use(morgan('dev'));
-// Function used to get short URL and username
 
 // const urlDatabase = {
 const urlDatabase = {};
-
 // User
 const users = {};
-// const users = {
-//   userRandomID: {
-//     id: "userRandomID",
-//     email: "user@example.com",
-//     password: "pmd",
-//   },
-//   bcplu4: {
-//     id: "bcplu4",
-//     email: "user2@example.com",
-//     password: "dishwasher-funk",
-//   },
-//   aJ48lW: {
-//     id: "aJ48lW",
-//     email: "a@b.com",
-//     password: "123"
-//   }
-// };
+
 // Homepage
 app.get("/", (req, res) => {
   if (req.session.user_id) {
@@ -53,6 +35,7 @@ app.get("/urls", (req, res) => {
     };
     res.render("urls_index", templateVars);
   } else {
+    res.status(400).send('400 Error: Must be logged in!');
     res.redirect("/login");
   }
 });
@@ -72,28 +55,37 @@ app.get("/urls/new", (req, res) => {
   }
 });
 
-app.get("/urls/:shortURL", (req, res) => {
-  const shortURL = req.params.shortURL;
-  console.log(urlDatabase);
-  const templateVars = {
-    urls: urlDatabase,
-    shortURL: req.params.shortURL,
-    longURL: urlDatabase[shortURL].longURL,
-    user: users[req.session.user_id]
-
-  };
+  app.get("/urls/:shortURL", (req, res) => {
+  const name = req.session.user_id;
+  let templateVars = {};
+  if (!name) {
+    templateVars.user = null;
+  } else {
+    const userURLs = getURLsByUserID(name, urlDatabase);
+    const {shortURL} = req.params;
+    if (userURLs[shortURL]) {
+      const longURL = urlDatabase[shortURL].longURL;
+      templateVars.user = users[name];
+      templateVars.longURL = longURL;
+      templateVars.shortURL = shortURL;
+    } else {
+      res.status(400).send('400 Error: Must be logged in with correct user!');
+      templateVars.user = users[name];
+      templateVars.shortURL = null;
+    }
+  }
   res.render("urls_show", templateVars);
 });
   
 app.get("/u/:shortURL", (req, res) => {
-  const shortURL = req.params.shortURL;
-  const templateVars = {
-    urls: urlDatabase,
-    shortURL: req.params.shortURL,
-    longURL: urlDatabase[shortURL].longURL,
-    user: users[req.session.user_id]
-  };
-  res.redirect("longUrl", templateVars);
+  const name = req.session.user_id;
+  const {shortURL} = req.params;
+  const userURLs = getURLsByUserID(name, urlDatabase);
+  if (userURLs[shortURL]) {
+    return res.redirect(urlDatabase[shortURL].longURL);
+  } 
+  res.status(400).send('400 Error: Must be logged in as that user!');
+  res.redirect("/login");
 });
 
 // registration
@@ -110,8 +102,8 @@ app.get("/registration", (req, res) => {
 
 app.post("/registration", (req, res) => {
   const name = generateRandomString();
-  const email = req.body.email;
-  const password = req.body.password;
+  const {email} = req.body;
+  const {password} = req.body;
   if (!email || !password || emailInUse(email, users)) {
     res.status(400).send('400 Error: Must contain correct email or password');
   } else {
@@ -139,23 +131,22 @@ app.get("/login", (req, res) => {
 });
 
 app.post("/login", (req, res) => {
-  const email = req.body.email;
+  const {email} = req.body;
   const pw = req.body.password;
-  const name = getUserByEmail(email, users);
+  const user = getUserByEmail(email, users);
   if (!email || !pw) {
     res.status(400).send('400 Error: Must contain correct email or password');
   }
-  if (name === null) {
+  if (!user) {
     return res.status(400).send('400 Error: No user found with that email!');
   }
-  if (!bcrypt.compareSync(pw, name.password)) {
+  if (!bcrypt.compareSync(pw, user.password)) {
     return res.status(400).send('400 Error: Username or password incorrect! Please try again!');
   } else {
-    req.session.user_id = name.name;
+    req.session.user_id = user.name;
     res.redirect("/urls");
   }
 });
-
 
 // Deletes url from database
 app.post("/urls/:shortURL/delete", (req, res) => {
@@ -163,13 +154,13 @@ app.post("/urls/:shortURL/delete", (req, res) => {
   delete urlDatabase[shortURL];
   res.redirect("/urls");
 });
+
 // Updates url in the database
 app.post("/urls/:shortURL/", (req, res) => {
   const shortURL = req.params.shortURL;
   const longURL = req.body.updatedURL;
   const user_id = req.session.user_id;
   urlDatabase[shortURL] = {longURL, user_id};
-  console.log(urlDatabase[shortURL]);
   res.redirect("/urls");
 });
 
@@ -178,10 +169,10 @@ app.post("/urls", (req, res) => {
   const longURL = req.body.longURL;
   const user_id = req.session.user_id;
   urlDatabase[shortURL] = {longURL, user_id};
-  if (req.session.user_id) {
-    res.redirect(`/urls/${shortURL}`);
-  } else {
+  if (!user_id) {
     res.status(400).send('400 Error: Must be logged in to save urls');
+  } else {
+    res.redirect(`/urls/${shortURL}`);
   }
 });
 // Logout post
@@ -190,9 +181,6 @@ app.post("/logout", (req, res) => {
   res.redirect("/login");
 });
 
-app.get("/urls.json", (req, res) => {
-  res.json(urlDatabase);
-});
 // 404 error page not found
 app.get("*", (req, res) => {
   res.status(404).send('404 Error: Page not found!');
