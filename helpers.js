@@ -20,7 +20,7 @@ const getUserbyID = (id, users) => {
   }
   return null;
 };
-// const urlDatabase = {};
+//
 const getURLsByUserID = (userID, urlDatabase) => {
   let userURLDatabase = {};
   for (const url in urlDatabase) {
@@ -30,7 +30,7 @@ const getURLsByUserID = (userID, urlDatabase) => {
   }
   return userURLDatabase;
 };
-
+//
 const emailInUse = (email, users) => {
   for (const user in users) {
     if (email === users[user].email) {
@@ -38,4 +38,5 @@ const emailInUse = (email, users) => {
     }
   }
 };
+
 module.exports = {generateRandomString, getURLsByUserID, getUserbyID, getUserByEmail, emailInUse};

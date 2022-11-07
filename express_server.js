@@ -25,7 +25,7 @@ app.get("/", (req, res) => {
     res.redirect("/login");
   }
 });
-
+//
 app.get("/urls", (req, res) => {
   const name = req.session.user_id;
   if (name) {
@@ -35,8 +35,7 @@ app.get("/urls", (req, res) => {
     };
     res.render("urls_index", templateVars);
   } else {
-    res.status(400).send('400 Error: Must be logged in!');
-    res.redirect("/login");
+    return res.status(400).send('400 Error: Must be logged in!');
   }
 });
 // Form to get a new url
@@ -59,33 +58,28 @@ app.get("/urls/new", (req, res) => {
   const name = req.session.user_id;
   let templateVars = {};
   if (!name) {
-    templateVars.user = null;
+    return res.status(400).send('400 Error: Must be logged in with correct user!');
   } else {
     const userURLs = getURLsByUserID(name, urlDatabase);
     const {shortURL} = req.params;
     if (userURLs[shortURL]) {
-      const longURL = urlDatabase[shortURL].longURL;
+      const longURL = userURLs[shortURL].longURL;
       templateVars.user = users[name];
       templateVars.longURL = longURL;
       templateVars.shortURL = shortURL;
     } else {
-      res.status(400).send('400 Error: Must be logged in with correct user!');
-      templateVars.user = users[name];
-      templateVars.shortURL = null;
+      return res.status(400).send('400 Error: Must be logged in with correct user and have correct url!');
     }
   }
   res.render("urls_show", templateVars);
 });
   
 app.get("/u/:shortURL", (req, res) => {
-  const name = req.session.user_id;
   const {shortURL} = req.params;
-  const userURLs = getURLsByUserID(name, urlDatabase);
-  if (userURLs[shortURL]) {
+  if (urlDatabase[shortURL]) {
     return res.redirect(urlDatabase[shortURL].longURL);
   } 
-  res.status(400).send('400 Error: Must be logged in as that user!');
-  res.redirect("/login");
+  return res.status(400).send('400 Error: This link does not exist!');
 });
 
 // registration
@@ -105,7 +99,7 @@ app.post("/registration", (req, res) => {
   const {email} = req.body;
   const {password} = req.body;
   if (!email || !password || emailInUse(email, users)) {
-    res.status(400).send('400 Error: Must contain correct email or password');
+    return res.status(400).send('400 Error: Must contain correct email or password');
   } else {
     req.session.user_id = name;
     const hashPassword = bcrypt.hashSync(password, 10);
@@ -135,7 +129,7 @@ app.post("/login", (req, res) => {
   const pw = req.body.password;
   const user = getUserByEmail(email, users);
   if (!email || !pw) {
-    res.status(400).send('400 Error: Must contain correct email or password');
+    return res.status(400).send('400 Error: Must contain correct email or password');
   }
   if (!user) {
     return res.status(400).send('400 Error: No user found with that email!');
@@ -166,11 +160,11 @@ app.post("/urls/:shortURL/", (req, res) => {
 
 app.post("/urls", (req, res) => {
   const shortURL = generateRandomString();
-  const longURL = req.body.longURL;
+  const {longURL} = req.body;
   const user_id = req.session.user_id;
   urlDatabase[shortURL] = {longURL, user_id};
   if (!user_id) {
-    res.status(400).send('400 Error: Must be logged in to save urls');
+    return res.status(400).send('400 Error: Must be logged in to save urls');
   } else {
     res.redirect(`/urls/${shortURL}`);
   }
@@ -183,7 +177,7 @@ app.post("/logout", (req, res) => {
 
 // 404 error page not found
 app.get("*", (req, res) => {
-  res.status(404).send('404 Error: Page not found!');
+  return res.status(404).send('404 Error: Page not found!');
 });
 
 app.listen(PORT, () => {
